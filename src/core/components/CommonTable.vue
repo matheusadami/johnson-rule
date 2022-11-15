@@ -8,7 +8,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-if="!isHorizonal" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700" v-for="row in rows">
+      <tr v-if="!isHorizontal" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700" v-for="row in rows">
         <slot name="body" :item="row"></slot>
       </tr>
       <tr v-else class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
@@ -22,7 +22,7 @@
 import { defineProps } from 'vue'
 
 interface Props {
-  isHorizonal?: boolean
+  isHorizontal?: boolean
   headers: string[]
   rows: any[],
 }

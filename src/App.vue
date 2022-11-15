@@ -84,7 +84,7 @@
         </div>
       </div>
       <div class="p-6 space-y-4">
-        <CommonTable is-horizonal :headers="headersFactoryTable" :rows="itemsFactory">
+        <CommonTable is-horizontal :headers="headersFactoryTable" :rows="itemsFactory">
           <template #body="{ item }: { item: Item }">
             <th class="py-4 px-6">
               {{ `${item.item}${item.factoryInMinutes}` }}
@@ -108,7 +108,7 @@
         </div>
       </div>
       <div class="p-6 space-y-4">
-        <CommonTable is-horizonal :headers="headersMountTable" :rows="itemsMount">
+        <CommonTable is-horizontal :headers="headersMountTable" :rows="itemsMount">
           <template #body="{ item }: { item: Item }">
             <th class="py-4 px-6">
               {{ `${item.item}${item.idlenessInMinutes ? item.idlenessInMinutes : item.mountInMinutes}` }}
