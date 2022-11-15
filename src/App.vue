@@ -63,7 +63,7 @@
         <div>
           <div v-if="isShowItemsTable" class="flex flex-row-reverse justify-between">
             <div>
-              <button @click="cleanLogs" type="submit" class="justify-center rounded-md border border-transparent bg-gray-600 py-2 px-4 text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+              <button @click="cleanItems" type="submit" class="justify-center rounded-md border border-transparent bg-gray-600 py-2 px-4 text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                 Limpar
               </button>
             </div>
@@ -153,8 +153,8 @@ const isShowItemsMountTable = computed(() => itemsMount.value.length > 0)
 const isShowItemsFactoryTable = computed(() => itemsFactory.value.length > 0)
 const headersMountTable = computed(() => Array.from({ length: itemsMount.value.length }, (v, i) => `${i + 1}º`))
 const headersFactoryTable = computed(() => Array.from({ length: itemsFactory.value.length }, (v, i) => `${i + 1}º`))
-const totalFactoryInMinutes = computed(() => itemsFactory.value?.reduce((p, c) => p + c.factoryInMinutes!, 0))
 const totalMountInMinutes = computed(() => itemsMount.value?.reduce((p, c) => p + c.mountInMinutes!, 0))
+const totalFactoryInMinutes = computed(() => itemsFactory.value?.reduce((p, c) => p + c.factoryInMinutes!, 0))
 const totalIdlenessInMinutes = computed(() => itemsMount.value?.reduce((p, c) => p + (c.idlenessInMinutes || 0), 0))
 
 function newItem() {
@@ -162,7 +162,7 @@ function newItem() {
   form.value = {}
 }
 
-function cleanLogs() {
+function cleanItems() {
   items.value = []
   itemsMount.value = []
   itemsFactory.value = []
