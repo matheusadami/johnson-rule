@@ -148,9 +148,9 @@ const items = ref<Item[]>([])
 const itemsMount = ref<Item[]>([])
 const itemsFactory = ref<Item[]>([])
 
-const isShowItemsTable = computed(() => items.value.length > 0)
-const isShowItemsMountTable = computed(() => itemsMount.value.length > 0)
-const isShowItemsFactoryTable = computed(() => itemsFactory.value.length > 0)
+const isShowItemsTable = computed(() => !!items.value.length)
+const isShowItemsMountTable = computed(() => !!itemsMount.value.length)
+const isShowItemsFactoryTable = computed(() => !!itemsFactory.value.length)
 const headersMountTable = computed(() => Array.from({ length: itemsMount.value.length }, (v, i) => `${i + 1}º`))
 const headersFactoryTable = computed(() => Array.from({ length: itemsFactory.value.length }, (v, i) => `${i + 1}º`))
 const totalMountInMinutes = computed(() => itemsMount.value?.reduce((p, c) => p + c.mountInMinutes!, 0))
@@ -169,52 +169,76 @@ function cleanItems() {
 }
 
 function calculate() {
-  itemsFactory.value = calculateItemsFactory()
+  let valuesFromItems = getUniqueValuesFromItems()
+  itemsFactory.value = calculateItemsFactory(valuesFromItems)
   itemsMount.value = calculateItemsMount()
 }
 
-function calculateItemsFactory(): Item[] {
-  let auxItems: Item[] = []
-  let valuesFromItems = sortValuesFromItems()
-  let countRankedItemsInMount = 0
-  let countRankedItemsInFactory = 0
+function getUniqueValuesFromItems(): number[] {
+  let mountValues = getOnlyMountInMinutesFromItems()
+  let factoryValues = getOnlyFactoryInMinutesFromItems()
+  let valuesFromItems = removeRepeatedValuesFromItems(mountValues, factoryValues)
+  return sortAscValuesFromItems(valuesFromItems)
+}
+
+function getOnlyMountInMinutesFromItems(): number[] {
+  return items.value.map(e => e.mountInMinutes) as number[]
+}
+
+function getOnlyFactoryInMinutesFromItems(): number[] {
+  return items.value.map(e => e.factoryInMinutes) as number[]
+}
+
+function removeRepeatedValuesFromItems(mountValues: number[], factoryValues: number[]): number[] {
+  return Array.from(new Set<number>([...mountValues, ...factoryValues]).values())
+}
+
+function sortAscValuesFromItems(valuesFromItems: number[]): number[] { 
+  valuesFromItems.sort((a, b) => a - b)
+  return valuesFromItems
+}
+
+function calculateItemsFactory(valuesFromItems: number[]): Item[] {
+  let sortedItems: Item[] = []
+  let countRankedItemsByMountCriteria = 0
+  let countRankedItemsByFactoryCriteria = 0
 
   valuesFromItems.forEach((value) => {
-    let itemsInFactory = items.value.filter(e => e.factoryInMinutes === value && !auxItems.includes(e))
-    if (itemsInFactory.length >= 2) {
-      itemsInFactory.sort((a, b) => a.mountInMinutes! < b.mountInMinutes! ? 1 : -1) 
-    }
+    let itemsInFactory = filterItemsByFactoryInMinutes(sortedItems, value)
+    itemsInFactory.sort((a, b) => a.mountInMinutes! < b.mountInMinutes! ? 1 : -1) 
 
     itemsInFactory.forEach(item => {
-      item.rank = nextRankFactory(countRankedItemsInFactory)
-      countRankedItemsInFactory++
-      auxItems.push(item)
+      item.rank = nextRankFactory(countRankedItemsByFactoryCriteria)
+      countRankedItemsByFactoryCriteria++
+      sortedItems.push(item)
     })
 
-    let itemsInMount = items.value.filter(e => e.mountInMinutes === value && !auxItems.includes(e))
-    if (itemsInMount.length >= 2) {
-      itemsInMount.sort((a, b) => a.factoryInMinutes! < b.factoryInMinutes! ? 1 : -1)
-    }
+    let itemsInMount = filterItemsByMountInMinutes(sortedItems, value)
+    itemsInMount.sort((a, b) => a.factoryInMinutes! < b.factoryInMinutes! ? 1 : -1)
 
     itemsInMount.forEach(item => {
-      item.rank = nextRankMount(countRankedItemsInMount, items.value)
-      countRankedItemsInMount++
-      auxItems.push(item)
+      item.rank = nextRankMount(countRankedItemsByMountCriteria, items.value)
+      countRankedItemsByMountCriteria++
+      sortedItems.push(item)
     })
   })
 
-  auxItems.sort((a, b) => a.rank! - b.rank!)
-  auxItems.forEach((item, i) => item.totalInMinutes = (auxItems[i - 1]?.totalInMinutes || 0) + item.factoryInMinutes! )
+  sortedItems.sort((a, b) => a.rank! - b.rank!)
+  setTotalInMinutesInItems(sortedItems)
 
-  return auxItems
+  return sortedItems
 }
 
-function sortValuesFromItems(): number[] {
-  let mountValues = items.value.map(e => e.mountInMinutes) as number[]
-  let factoryValues = items.value.map(e => e.factoryInMinutes) as number[]
-  let valuesFromItems = Array.from(new Set<number>([...mountValues, ...factoryValues]).values())
-  valuesFromItems.sort((a, b) => a - b)
-  return valuesFromItems
+function filterItemsByFactoryInMinutes(sortedItems: Item[], value: number): Item[] {
+  return items.value.filter(e => e.factoryInMinutes === value && !sortedItems.includes(e))
+}
+
+function filterItemsByMountInMinutes(sortedItems: Item[], value: number): Item[] {
+  return items.value.filter(e => e.mountInMinutes === value && !sortedItems.includes(e))
+}
+
+function setTotalInMinutesInItems(sortedItems: Item[]) {
+  sortedItems.forEach((item, i) => item.totalInMinutes = (sortedItems[i - 1]?.totalInMinutes || 0) + item.factoryInMinutes! )
 }
 
 function nextRankFactory(countItems: number): number {
@@ -226,24 +250,25 @@ function nextRankMount(countItems: number, items: Item[]): number {
 }
 
 function calculateItemsMount(): Item[] {
-  let auxItemsMount: Item[] = []
+  let itemsMount: Item[] = []
   let totalMountInMinutes: number = 0
 
-  itemsFactory.value.forEach((itemFactory, i) => {
-    if (totalMountInMinutes < itemFactory.totalInMinutes!) {
+  itemsFactory.value.forEach((itemFactory) => {
+    let isTotalMountIsLowerTotalFactory = totalMountInMinutes < itemFactory.totalInMinutes! 
+    if (isTotalMountIsLowerTotalFactory) {
       let idlenessInMinutes = itemFactory.totalInMinutes! - totalMountInMinutes
       totalMountInMinutes += idlenessInMinutes
 
-      let idlenessItem: Item = buildIdlenessItem(itemFactory, auxItemsMount.length + 1, totalMountInMinutes, idlenessInMinutes)
-      auxItemsMount.push(idlenessItem)
+      let idlenessItem: Item = buildIdlenessItem(itemFactory, itemsMount.length + 1, totalMountInMinutes, idlenessInMinutes)
+      itemsMount.push(idlenessItem)
     }
 
     totalMountInMinutes += itemFactory.mountInMinutes!
 
-    auxItemsMount.push({...itemFactory, totalInMinutes: totalMountInMinutes})
+    itemsMount.push({...itemFactory, totalInMinutes: totalMountInMinutes})
   })
 
-  return auxItemsMount
+  return itemsMount
 }
 
 function buildIdlenessItem(itemFactory: Item, rank: number, totalInMinutes: number, idlenessInMinutes: number): Item {
